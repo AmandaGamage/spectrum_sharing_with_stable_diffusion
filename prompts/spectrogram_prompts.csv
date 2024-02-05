@@ -1,0 +1,17 @@
+prompt,classname,classidx
+CH1 Empty.CH2 Empty,ch1_empty_ch2_empty,0
+CH1 Primary.CH2 Empty,ch1_primary_ch2_empty,1
+CH1 Secondary.CH2 Empty,ch1_secondary_ch2_empty,2
+CH1 Collision.CH2 Empty,ch1_collision_ch2_empty,3
+CH1 Empty.CH2 Primary,ch1_empty_ch2_primary,4
+CH1 Empty.CH2 Secondary,ch1_empty_ch2_secondary,5
+CH1 Empty.CH2 Collision,ch1_empty_ch2_collision,6
+CH1 Primary.CH2 Primary,ch1_primary_ch2_primary,7
+CH1 Primary.CH2 Secondary,ch1_primary_ch2_secondary,8
+CH1 Primary.CH2 Collision,ch1_primary_ch2_collision,9
+CH1 Secondary.CH2 Primary,ch1_secondary_ch2_primary,10
+CH1 Secondary.CH2 Secondary,ch1_secondary_ch2_secondary,11
+CH1 Secondary.CH2 Collision,ch1_secondary_ch2_collision,12
+CH1 Collision.CH2 Primary,ch1_collision_ch2_primary,13
+CH1 Collision.CH2 Secondary,ch1_collision_ch2_secondary,14
+CH1 Collision.CH2 Collision,ch1_collision_ch2_collision,15
