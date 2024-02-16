@@ -97,10 +97,10 @@ class Spectrogram(torch.utils.data.Dataset):
 
     def __init__(self, root_dir, transform=None, target_transform=None):
         # Load the dataset files (images and labels) from root_dir
-        self.images, self.labels = self.load_dataset(root_dir)
+        self.root_dir = root_dir
         self.transform = transform
         self.target_transform = target_transform
-
+        self.images, self.labels = self.load_dataset()
     def __len__(self):
         return len(self.images)
 
@@ -116,21 +116,18 @@ class Spectrogram(torch.utils.data.Dataset):
 
         return image, label
     
-    def load_dataset(root_dir):
+    def load_dataset(self):
         images = []
         labels = []
 
-        with open(os.path.join(root_dir, "labels.txt"), "r") as f:  # Assuming labels are in "labels.txt"
+        with open(os.path.join(self.root_dir, "labels.txt"), "r") as f:  # Assuming labels are in "labels.txt"
             for line in f:
                 image_path, label = line.strip().split()  # Assuming space-separated image path and label
-                image = Image.open(os.path.join(root_dir, image_path)).convert("RGB")  # Load image using PIL
+                image = Image.open(os.path.join(self.root_dir, image_path)).convert("RGB")  # Load image using PIL
                 images.append(image)
-                labels.append(int(label))  # Convert label to integer if necessary
-
+                labels.append(label) 
         return images, labels     
-         
-         
-         
+        
          
          
               
