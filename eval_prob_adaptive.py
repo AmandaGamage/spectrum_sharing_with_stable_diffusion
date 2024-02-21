@@ -15,8 +15,7 @@ from preprocessing import split_data
 from torchvision import transforms
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-if torch.cuda.is_available():
-    print("CUDA available")
+
 DATASET_ROOT="E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir"
 prompt_path = "E:\Msc\Lab\stable-diffusion with classifier\prompts\spectrogram_prompts_train.csv"
 
@@ -26,30 +25,16 @@ INTERPOLATIONS = {
     'lanczos': InterpolationMode.LANCZOS,
 }
 
-args={
-"interpolation":'bicubic',
-"loss":'l1',
-"img_size":512,
-"dataset":'spectrogram',
-"worker_idx":0,
-"n_workers":1,
-"n_trials":1,
-"version":'2-0',
-"to_keep":'5 1',
-"n_samples":'3',
-"dtype": 'float32',
-"load_stats":False,
-"batch_size":32,
-"loss":'l2'
-}
 
-
-def get_target_dataset():
-    image_transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # Resize the image to (224, 224)
-    transforms.ToTensor()  # Convert the image to a PyTorch tensor
-])
-    dataset=split_data.Spectrogram(root_dir=DATASET_ROOT,transform=image_transform, target_transform=None)
+def get_target_dataset(args):
+    image_transform = torch_transforms.Compose([
+        torch_transforms.Resize(args["img_size"], interpolation=InterpolationMode.BICUBIC),
+        torch_transforms.CenterCrop(args["img_size"]),
+        _convert_image_to_rgb,
+        torch_transforms.ToTensor(),
+        torch_transforms.Normalize([0.5], [0.5])
+    ])
+    dataset=split_data.Spectrogram(root_dir=DATASET_ROOT,csv_root=prompt_path,transform=image_transform, target_transform=None)
     return dataset
 
 
@@ -72,13 +57,11 @@ def center_crop_resize(img, interpolation=InterpolationMode.BILINEAR):
     transform = get_transform(interpolation=interpolation)
     return transform(img)
 
-def eval_prob_adaptive(unet, latent,args, text_embeds, scheduler,  latent_size=64, all_noise=None):
+def eval_prob_adaptive(unet, latent, text_embeds, scheduler, args, latent_size=64):
     scheduler_config = get_scheduler_config()
-    T = scheduler_config['num_train_timesteps']
     max_n_samples = max(args["n_samples"])
-
-    if all_noise is None:
-        all_noise = torch.randn((max_n_samples * args["n_trials"], 4, latent_size, latent_size), device=latent.device)
+    T = scheduler_config['num_train_timesteps']
+    all_noise = torch.randn((max_n_samples * args["n_trials"], 4, latent_size, latent_size), device=latent.device)
     if args["dtype"] == 'float16':
         all_noise = all_noise.half()
         scheduler.alphas_cumprod = scheduler.alphas_cumprod.half()
@@ -89,11 +72,11 @@ def eval_prob_adaptive(unet, latent,args, text_embeds, scheduler,  latent_size=6
     start = T // max_n_samples // 2
     t_to_eval = list(range(start, T, T // max_n_samples))[:max_n_samples]
 
-    for args["n_samples"], args["n_to_keep"] in zip(args["n_samples"], args["to_keep"]):
+    for n_samples, n_to_keep in zip(args["n_samples"], args["to_keep"]):
         ts = []
         noise_idxs = []
         text_embed_idxs = []
-        curr_t_to_eval = t_to_eval[len(t_to_eval) // args["n_samples"] // 2::len(t_to_eval) // args["n_samples"]][:args["n_samples"]]
+        curr_t_to_eval = t_to_eval[len(t_to_eval) // n_samples // 2::len(t_to_eval) // n_samples][:n_samples]
         curr_t_to_eval = [t for t in curr_t_to_eval if t not in t_evaluated]
         for prompt_i in remaining_prmpt_idxs:
             for t_idx, t in enumerate(curr_t_to_eval, start=len(t_evaluated)):
@@ -116,7 +99,7 @@ def eval_prob_adaptive(unet, latent,args, text_embeds, scheduler,  latent_size=6
 
         # compute the next remaining idxs
         errors = [-data[prompt_i]['pred_errors'].mean() for prompt_i in remaining_prmpt_idxs]
-        best_idxs = torch.topk(torch.tensor(errors), k=args["n_to_keep"], dim=0).indices.tolist()
+        best_idxs = torch.topk(torch.tensor(errors), k=n_to_keep, dim=0).indices.tolist()
         remaining_prmpt_idxs = [remaining_prmpt_idxs[i] for i in best_idxs]
 
     # organize the output
@@ -151,8 +134,26 @@ def eval_error(unet, scheduler, latent, all_noise, ts, noise_idxs,
             idx += len(batch_ts)
     return pred_errors
 
-def main(args):
+def main():
     img_size=512
+    
+    args={
+    "interpolation":'bicubic',
+    "loss":'l1',
+    "img_size":512,
+    "dataset":'spectrogram',
+    "worker_idx":0,
+    "n_workers":1,
+    "n_trials":1,
+    "version":'2-0',
+    "to_keep":[2, 1],
+    "n_samples":[5,500],
+    "dtype": 'float32',
+    "load_stats":True,
+    "batch_size":32,
+    "loss":'l2'
+    }
+    assert len(args["to_keep"])==len(args["n_samples"])
     #parser = argparse.ArgumentParser()
 
     # dataset args
@@ -183,8 +184,8 @@ def main(args):
 
     # make run output folder
     name = f"v{args['version']}_{args['n_trials']}trials_"
-    name += '_'.join(map(str, args["to_keep"])) + 'keep_'
-    name += '_'.join(map(str, args["n_samples"])) + 'samples'
+    name += '_'.join(map(str, str(args["to_keep"]))) + 'keep_'
+    name += '_'.join(map(str, str(args["n_samples"]))) + 'samples'
     if args['interpolation'] != 'bicubic':
         name += f'_{interpolation}'
     if args["loss"] == 'l1':
@@ -202,7 +203,7 @@ def main(args):
     interpolation = INTERPOLATIONS[args['interpolation']]
     #transform = get_transform(interpolation, img_size)
     latent_size = img_size // 8
-    target_dataset = get_target_dataset()
+    target_dataset = get_target_dataset(args)
     prompts_df = pd.read_csv(prompt_path)
 
     # load pretrained models
@@ -256,14 +257,13 @@ def main(args):
         #################################
         image, label =target_dataset[i]
         #image, label = [sublist[0] for sublist in target_dataset[:2]]
-        print(type(image))
         with torch.no_grad():
             img_input = image.to(device).unsqueeze(0)
             if args["dtype"] == 'float16':
                 img_input = img_input.half()
             x0 = vae.encode(img_input).latent_dist.mean
             x0 *= 0.18215
-        pred_idx, pred_errors = eval_prob_adaptive(unet, x0, text_embeddings, scheduler,  latent_size)
+        pred_idx, pred_errors = eval_prob_adaptive(unet, x0, text_embeddings, scheduler,  args,latent_size)
         pred = prompts_df.classidx[pred_idx]
         torch.save(dict(errors=pred_errors, pred=pred, label=label), fname)
         if pred == label:
@@ -272,4 +272,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(args)
+    main()

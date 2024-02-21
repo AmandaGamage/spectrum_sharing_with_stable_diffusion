@@ -5,6 +5,7 @@ from PIL import Image
 from torchvision.datasets import DatasetFolder
 from torch.utils.data import Dataset
 import torch
+import csv
 
 '''class DatasetMapper:
     def __init__(self, dataset_path, labels_file_path):
@@ -95,9 +96,10 @@ class Preprocess():
     
 class Spectrogram(torch.utils.data.Dataset):
 
-    def __init__(self, root_dir, transform=None, target_transform=None):
+    def __init__(self, root_dir, csv_root,transform=None, target_transform=None):
         # Load the dataset files (images and labels) from root_dir
         self.root_dir = root_dir
+        self.csv_root = csv_root
         self.transform = transform
         self.target_transform = target_transform
         self.images, self.labels = self.load_dataset()
@@ -118,15 +120,22 @@ class Spectrogram(torch.utils.data.Dataset):
     
     def load_dataset(self):
         images = []
-        labels = []
+        class_indices = []
 
-        with open(os.path.join(self.root_dir, "labels.txt"), "r") as f:  # Assuming labels are in "labels.txt"
+        class_index_dict = {}
+        with open(os.path.join(self.root_dir, self.csv_root), "r") as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+            for row in csv_reader:
+                class_index_dict[row['classname']] = int(row['classidx'])
+
+        with open(os.path.join(self.root_dir, "labels.txt"), "r") as f:
             for line in f:
-                image_path, label = line.strip().split()  # Assuming space-separated image path and label
-                image = Image.open(os.path.join(self.root_dir, image_path)).convert("RGB")  # Load image using PIL
+                image_path, label = line.strip().split()
+                image = Image.open(os.path.join(self.root_dir, image_path)).convert("RGB")
                 images.append(image)
-                labels.append(label) 
-        return images, labels     
+                class_indices.append(class_index_dict[label])  # Append class index instead of label
+
+        return images, class_indices
         
          
          
