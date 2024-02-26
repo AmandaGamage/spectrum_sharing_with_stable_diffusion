@@ -13,11 +13,13 @@ import torchvision.transforms as torch_transforms
 from torchvision.transforms.functional import InterpolationMode
 from preprocessing import split_data
 from torchvision import transforms
+import csv
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-DATASET_ROOT="E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir"
-prompt_path = "E:\Msc\Lab\stable-diffusion with classifier\prompts\spectrogram_prompts_train.csv"
+
+DATASET_ROOT="E:\\Msc\\Lab\\spectrum_sharing_data\\one_channel_all_labeled_data"
+prompt_path = "E:\Msc\Lab\spectrum_sharing_with_stable_diffusion\prompts\spectrogram_prompts_one_channel.csv"
 
 INTERPOLATIONS = {
     'bilinear': InterpolationMode.BILINEAR,
@@ -58,7 +60,7 @@ def center_crop_resize(img, interpolation=InterpolationMode.BILINEAR):
     return transform(img)
 
 def eval_prob_adaptive(unet, latent, text_embeds, scheduler, args, latent_size=64):
-    scheduler_config = get_scheduler_config()
+    scheduler_config = get_scheduler_config(args)
     max_n_samples = max(args["n_samples"])
     T = scheduler_config['num_train_timesteps']
     all_noise = torch.randn((max_n_samples * args["n_trials"], 4, latent_size, latent_size), device=latent.device)
@@ -145,9 +147,9 @@ def main():
     "worker_idx":0,
     "n_workers":1,
     "n_trials":1,
-    "version":'2-0',
-    "to_keep":[2, 1],
-    "n_samples":[5,500],
+    "version":'2-1',
+    "to_keep":[4, 1],
+    "n_samples":[4,50],
     "dtype": 'float32',
     "load_stats":True,
     "batch_size":32,
@@ -156,7 +158,7 @@ def main():
     assert len(args["to_keep"])==len(args["n_samples"])
     #parser = argparse.ArgumentParser()
 
-    # dataset args
+    # dataset argshigh
     #parser.add_argument('--dataset', type=str, default='spectrogram',choices=['spectrogram'])
     #parser.add_argument('--split', type=str, default='train', choices=['train', 'test'], help='Name of split')
 
@@ -205,9 +207,16 @@ def main():
     latent_size = img_size // 8
     target_dataset = get_target_dataset(args)
     prompts_df = pd.read_csv(prompt_path)
+    
+    true_labels = []
+    with open(prompt_path,"r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            true_labels.append(row["classname"])
+
 
     # load pretrained models
-    vae, tokenizer, text_encoder, unet, scheduler = get_sd_model()
+    vae, tokenizer, text_encoder, unet, scheduler = get_sd_model(args)
     vae = vae.to(device)
     text_encoder = text_encoder.to(device)
     unet = unet.to(device)
@@ -238,7 +247,8 @@ def main():
 
     idxs = list(range(len(target_dataset)))
     idxs_to_eval = idxs[args["worker_idx"]::args["n_workers"]]
-
+    true_labels=prompts_df.classidx
+    accuracy_per_label={label:{"tp": 0, "fp": 0, "total": 0} for label in set(true_labels)}
     formatstr = get_formatstr(len(target_dataset) - 1)
     correct = 0
     total = 0
@@ -251,7 +261,13 @@ def main():
             print('Skipping', i)
             if args["load_stats"]:
                 data = torch.load(fname)
-                correct += int(data['pred'] == data['label'])
+                if data['pred'] == data['label']:
+                    accuracy_per_label[data['label']]["tp"] += 1
+                    correct+=1
+                else:
+                    accuracy_per_label[data['label']]["fp"] += 1
+                #correct += int(data['pred'] == data['label'])
+                accuracy_per_label[data['label']]["total"] += 1
                 total += 1
             continue
         #################################
@@ -267,9 +283,15 @@ def main():
         pred = prompts_df.classidx[pred_idx]
         torch.save(dict(errors=pred_errors, pred=pred, label=label), fname)
         if pred == label:
+            accuracy_per_label[label]["tp"] += 1
             correct += 1
+        else:
+            accuracy_per_label[label]["fp"] += 1
         total += 1
-
+        accuracy_per_label[label]["total"] += 1
+        
+    for label, accuracy in accuracy_per_label.items():
+        print(f"Accuracy for {label}: {accuracy:.2f}")
 
 if __name__ == '__main__':
     main()

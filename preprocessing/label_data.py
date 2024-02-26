@@ -1,24 +1,24 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import convert_to_png 
-import datasets
-from datasets import load_dataset
-import accelerate
-from accelerate.utils import write_basic_config
+#import convert_to_png 
+#import datasets
+#from datasets import load_dataset
+#from accelerate.utils import write_basic_config
 import cv2
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-from skimage.metrics import structural_similarity as ssim
+import random
+import shutil
+#os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+#from skimage.metrics import structural_similarity as ssim
 
-write_basic_config()
+#write_basic_config()
 
 
 #chirp 1
-file_path_chirp2 = 'E://Msc//Lab//sd//spectrogram_numpy//spectrogram//Chirp_1.npy'
-output_directory = 'E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\spectrogram images new'
+#file_path_chirp2 = 'E://Msc//Lab//sd//spectrogram_numpy//spectrogram//Chirp_1.npy'
+#output_directory = 'E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\spectrogram images new'
 
 
-def convert_to_png_function(file_path,output):
+'''def convert_to_png_function(file_path,output):
     #convert to png
     convert_to_png_obj=convert_to_png.convert_png()
     convert_to_png_obj.converting_and_saving_pngs(file_path,output)
@@ -79,15 +79,15 @@ def compare_features(features1, features2):
         raise ValueError("Unsupported feature types for comparison.")
 
 # Specify paths
-image_folder = "E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir"
-output_file = "E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\labels_1.txt"
+#image_folder = "E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir"
+#output_file = "E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\labels_1.txt"
 
 # Load sample images for comparison
-radar_samples = [cv2.imread(f"E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir_samples\\radar_sample_{i}.png") for i in range(1, 26)]  
-empty_samples = [cv2.imread(f"E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir_samples\\empty_sample_{i}.png") for i in range(1,  23)]  
+#radar_samples = [cv2.imread(f"E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir_samples\\radar_sample_{i}.png") for i in range(1, 26)]  
+#empty_samples = [cv2.imread(f"E:\\Msc\\Lab\\sd\\spectrogram_numpy\\spectrogram\\data_dir_samples\\empty_sample_{i}.png") for i in range(1,  23)]  
 
 # Create an empty list to store labels
-labels = []
+#labels = []
 
 def sample_feature_extractor(samples):
     sample_features=[]
@@ -96,8 +96,8 @@ def sample_feature_extractor(samples):
         sample_features.append(features)
     return sample_features
 
-radar_sample_features=sample_feature_extractor(radar_samples)
-empty_sample_features=sample_feature_extractor(empty_samples)
+#radar_sample_features=sample_feature_extractor(radar_samples)
+#empty_sample_features=sample_feature_extractor(empty_samples)
 
 # Iterate through images in the folder
 for filename in os.listdir(image_folder):
@@ -126,16 +126,152 @@ for filename in os.listdir(image_folder):
             label = "empty"
 
         # Append label to the list
-        labels.append(f"{filename} {label}\n")
+        labels.append(f"{filename} {label}\n")'''
 
 # Save labels to the text file
-with open(output_file, "w") as f:
-    f.writelines(labels)
+#with open(output_file, "w") as f:
+ #   f.writelines(labels)
 
-print(f"Labels saved to {output_file}")
+#print(f"Labels saved to {output_file}")
 
 
+# Path to the folder containing class folders
+root_folder = 'E:\\Msc\\Lab\\spectrum_sharing_data\\labeled_data'
+# Path to the folder where images will be moved
+#output_folder = 'E:\\Msc\\Lab\\spectrum_sharing_data\\all_data'
+# Path to the output text file for labels
+label_file = 'E:\\Msc\\Lab\\spectrum_sharing_data\\labels.txt'
 
+def move_and_rename_images(root_folder, output_folder, label_file):
+    with open(label_file, 'w') as f:
+        image_counter = 1
+        for class_folder in os.listdir(root_folder):
+            class_path = os.path.join(root_folder, class_folder)
+            if os.path.isdir(class_path):
+                images_in_class = os.listdir(class_path)
+                random.shuffle(images_in_class)  # Shuffle images in each class folder
+                for img_file in images_in_class:
+                    img_path = os.path.join(class_path, img_file)
+                    # Rename image with prefix of class folder name and image count
+                    new_filename = f"{class_folder}_{image_counter}.jpg"
+                    new_img_path = os.path.join(output_folder, new_filename)
+                    shutil.copyfile(img_path, new_img_path)
+                    # Write label to text file
+                    f.write(f" {class_folder}\n")
+                    image_counter += 1
+
+
+# Create the output folder if it doesn't exist
+#if not os.path.exists(output_folder):
+ #   os.makedirs(output_folder)
+
+# Move and rename images and write labels
+#move_and_rename_images(root_folder, output_folder, label_file)
+#########################################################################################
+#shuffling the images
+
+'''labels_file='E:\\Msc\\Lab\\spectrum_sharing_data\\labels.txt'
+output_folder = 'E:\\Msc\\Lab\\spectrum_sharing_data\\all_shuffled_data'
+images_folder= 'E:\\Msc\\Lab\\spectrum_sharing_data\\all_data'
+
+
+# Read labels
+with open(labels_file, 'r') as f:
+    labels = [line.strip() for line in f.readlines()]
+
+# Generate image filenames based on the number of labels
+image_filenames = [f'image_{i+1}.jpg' for i in range(len(labels))]
+
+# Shuffle images and labels
+combined = list(zip(image_filenames, labels))
+random.shuffle(combined)
+shuffled_image_filenames, shuffled_labels = zip(*combined)
+
+# Create output folder if it doesn't exist
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# Write shuffled labels
+shuffled_labels_file = os.path.join(output_folder, 'shuffled_labels.txt')
+with open(shuffled_labels_file, 'w') as f:
+    for label in shuffled_labels:
+        f.write(f"{label}\n")
+
+# Copy and rename shuffled images
+for i, image_filename in enumerate(shuffled_image_filenames):
+    image_path = os.path.join(images_folder, random.choice(os.listdir(images_folder))) # pick a random image from the folder
+    new_image_path = os.path.join(output_folder, image_filename)
+    shutil.copyfile(image_path, new_image_path)
+
+print("Images and labels shuffled successfully!")'''
+####################################################################################
+image_folder = "E:\\Msc\\Lab\\spectrum_sharing_data\\all_shuffled_data"
+
+# Path to the labels.txt file
+labels_file = "E:\\Msc\\Lab\\spectrum_sharing_data\\shuffled_labels.txt"
+
+# New file to save modified labels
+new_labels_file = "E:\\Msc\\Lab\\spectrum_sharing_data\\all_shuffled_data\\new_shuffled_labels.txt"
+'''
+# Read labels from the existing file
+with open(labels_file, 'r') as file:
+    labels = file.readlines()
+
+# Strip newline characters and split by space
+labels = [label.strip().split() for label in labels]
+
+# Get list of image file names in the image folder
+image_files = os.listdir(image_folder)
+
+# Combine image paths with labels
+label_with_paths = [(os.path.join(image_folder, image_files[i]), labels[i][0]) for i in range(len(image_files))]
+
+# Write combined labels to new file
+with open(new_labels_file, 'w') as file:
+    for label, path in label_with_paths:
+        file.write(f"{path} {label}\n")
+
+print("New labels file generated successfully!")
     
 
 
+'''
+import os
+import random
+
+# Path to the directory containing the class folders
+data_dir = "E:\\Msc\\Lab\\spectrum_sharing_data\\one_channel_labeled_data"
+
+# Path to the directory where you want to move all images
+output_dir = "E:\\Msc\\Lab\\spectrum_sharing_data\\one_channel_all_labeled_data"
+
+# Initialize an empty list to store image paths and corresponding labels
+image_label_pairs = []
+
+# Iterate over each class folder
+for class_name in os.listdir(data_dir):
+    class_dir = os.path.join(data_dir, class_name)
+    
+    # Skip if the entry is not a directory
+    if not os.path.isdir(class_dir):
+        continue
+    
+    # Iterate over each image in the class folder
+    for filename in os.listdir(class_dir):
+        if filename.endswith(".jpg") or filename.endswith(".png"):  # Assuming images are either JPG or PNG
+            # Store the image path and corresponding label (class name)
+            image_path = os.path.join(class_dir, filename)
+            image_label_pairs.append((image_path, class_name))
+
+# Shuffle the image_label_pairs list
+random.shuffle(image_label_pairs)
+
+# Move the images to the output directory, rename them, and write labels to a text file
+with open(os.path.join(output_dir, "labels.txt"), "w") as f:
+    for idx, (image_path, label) in enumerate(image_label_pairs, start=1):
+        # Move the image to the output directory and rename it
+        dst = os.path.join(output_dir, f"image_{idx}.jpg")
+        os.rename(image_path, dst)
+        
+        # Write the label and new image path to the labels file
+        f.write(f"{label} image_{idx}.jpg\n")

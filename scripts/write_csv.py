@@ -1,13 +1,24 @@
 import csv
 
-with open('spectrogram_prompts_train.csv', 'w', newline='') as file:
+'''with open('spectrogram_prompts_train.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     field = ["prompt", "classname", "classidx"]
     
     writer.writerow(field)
     writer.writerow(["Empty", "empty", "0"])
-    writer.writerow(["Radar", "radar", "1"])
+    writer.writerow(["Radar", "radar", "1"])'''
    
+   
+with open('spectrogram_prompts_one_channel.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    field = ["prompt", "classname", "classidx"]
+    
+    writer.writerow(field)
+    writer.writerow(["Empty", "empty", "0"])
+    writer.writerow(["Primary", "primary", "1"])
+    writer.writerow(["Secondary", "secondary", "2"])
+    writer.writerow(["Collision", "collision", "3"])
+    
 
 '''with open('spectrogram_prompts.csv', 'w', newline='') as file:
     writer = csv.writer(file)

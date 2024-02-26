@@ -34,7 +34,7 @@ import csv
                 
 class DatasetMapper(DatasetFolder):
     def __init__(self, root, labels_file_path, transform=None):
-        super(DatasetMapper, self).__init__(root, loader=self.loader, extensions='.png', transform=transform)
+        super(DatasetMapper, self).__init__(root, loader=self.loader, extensions='.jpg', transform=transform)
         self.labels_file_path = labels_file_path
         self.class_to_idx = {}
         self.file_to_class = {}
@@ -130,7 +130,7 @@ class Spectrogram(torch.utils.data.Dataset):
 
         with open(os.path.join(self.root_dir, "labels.txt"), "r") as f:
             for line in f:
-                image_path, label = line.strip().split()
+                label ,image_path = line.strip().split()
                 image = Image.open(os.path.join(self.root_dir, image_path)).convert("RGB")
                 images.append(image)
                 class_indices.append(class_index_dict[label])  # Append class index instead of label
